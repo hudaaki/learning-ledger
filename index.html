@@ -532,7 +532,6 @@
   .type-badge[data-cat="other"] { background: var(--cat-other-bg); color: var(--cat-other-ink); }
 
   .deadline-pill {
-    margin-left: auto;
     font-family: "IBM Plex Mono", monospace;
     font-size: 11px;
     color: var(--muted);
@@ -544,6 +543,22 @@
   }
   .deadline-pill.is-overdue { color: var(--danger); border-color: var(--danger); background: var(--warn-soft); }
   .deadline-pill.is-done { color: var(--muted); border-color: var(--line); }
+
+  .entry-toggle-btn {
+    margin-left: auto;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 11px;
+    letter-spacing: 0.03em;
+    color: var(--active);
+    background: transparent;
+    border: 1px solid var(--line);
+    padding: 3px 9px;
+    border-radius: 999px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .entry-toggle-btn:hover { border-color: var(--active); }
+  .entry-body[hidden] { display: none; }
 
   .entry-title-display {
     font-family: "Newsreader", Georgia, serif;
@@ -1520,6 +1535,8 @@
   var isTeacherMode = false;
   var forceEditIds = {};     // entryId -> true, while "Edit anyway" override is active this session
   var editingIds = {};       // entryId -> true, while an unreached entry is in its own edit form
+  var manualExpand = {};     // entryId -> true/false, once the student/teacher has explicitly toggled it;
+                              // entries not in this map fall back to "expanded only if it's the active one"
   var qaDrafts = {};         // threadId -> draft reply text
   var pendingAttachment = null; // { file, name }
   var selectedType = 'video';
@@ -1954,6 +1971,14 @@
     // with a plain "Edit" button; clicking it sets editingIds[entry.id].
     var canEdit = isTeacherMode && !reached && !!editingIds[entry.id];
     var canEditReached = isTeacherMode && reached && !!forceEditIds[entry.id];
+    var isEditableNowForExpand = canEdit || canEditReached;
+
+    // Collapsed by default for every entry except the one currently active
+    // (the one she needs to do next) -- but an explicit manual toggle always
+    // wins, and being actively edited always forces it open so the edit
+    // controls are never hidden behind a collapsed card.
+    var isExpanded = (entry.id in manualExpand) ? manualExpand[entry.id] : isActive;
+    if (isEditableNowForExpand) isExpanded = true;
 
     var li = document.createElement('li');
     li.className = 'entry' + (isCompleted ? ' is-completed' : isActive ? ' is-active' : ' is-locked');
@@ -1979,6 +2004,17 @@
       top.appendChild(pill);
     }
 
+    var toggleBtn = document.createElement('button');
+    toggleBtn.type = 'button';
+    toggleBtn.className = 'entry-toggle-btn';
+    toggleBtn.setAttribute('aria-expanded', String(isExpanded));
+    toggleBtn.textContent = isExpanded ? '▾ Hide details' : '▸ Show details';
+    toggleBtn.addEventListener('click', function () {
+      manualExpand[entry.id] = !isExpanded;
+      renderAll();
+    });
+    top.appendChild(toggleBtn);
+
     var isEditableNow = canEdit || canEditReached;
 
     // ---- title ----
@@ -1994,6 +2030,12 @@
       titleEl.textContent = entry.title;
       li.appendChild(titleEl);
     }
+
+    // Everything below (link/attachment, note, locked message, reflection,
+    // teacher controls) is the "body" -- hidden while the card is collapsed,
+    // so a minimized entry still shows its title/status/type/deadline up top.
+    var bodyWrap = document.createElement('div');
+    bodyWrap.className = 'entry-body';
 
     // ---- type picker (edit mode only) ----
     var editTypeVal = entry.type;
@@ -2018,7 +2060,7 @@
         picker.appendChild(b);
       });
       typeRow.appendChild(picker);
-      li.appendChild(typeRow);
+      bodyWrap.appendChild(typeRow);
     }
 
     // ---- link / attachment ----
@@ -2044,7 +2086,7 @@
         attachSpan.className = 'attach-name';
         attachSpan.textContent = '📎 ' + (entry.pdfName || 'attached PDF') + ' (replacing the link above won\'t remove this attachment; leave the link blank to keep using the PDF)';
         linkRow.appendChild(attachSpan);
-        li.appendChild(linkRow);
+        bodyWrap.appendChild(linkRow);
       }
     } else if (entry.pdfFileId) {
       var attachSpan2 = document.createElement('span');
@@ -2083,8 +2125,8 @@
         }
       });
 
-      li.appendChild(linkRow);
-      li.appendChild(previewFrame);
+      bodyWrap.appendChild(linkRow);
+      bodyWrap.appendChild(previewFrame);
     } else if (entry.url) {
       var linkText = document.createElement('span');
       linkText.className = 'entry-link-text';
@@ -2098,7 +2140,7 @@
       openLink.textContent = 'Open →';
       openLink.href = entry.url;
       linkRow.appendChild(openLink);
-      li.appendChild(linkRow);
+      bodyWrap.appendChild(linkRow);
     }
 
     // ---- teacher note ----
@@ -2110,12 +2152,12 @@
       noteEditBox.setAttribute('data-placeholder', 'Anything she should know before starting this one...');
       noteEditBox.textContent = entry.note || '';
       wirePlainTextEditable(noteEditBox);
-      li.appendChild(noteEditBox);
+      bodyWrap.appendChild(noteEditBox);
     } else if (!isLocked && entry.note) {
       var noteEl = document.createElement('div');
       noteEl.className = 'teacher-note';
       noteEl.textContent = entry.note;
-      li.appendChild(noteEl);
+      bodyWrap.appendChild(noteEl);
     }
 
     // ---- locked message ----
@@ -2123,7 +2165,7 @@
       var lockedMsg = document.createElement('div');
       lockedMsg.className = 'locked-msg';
       lockedMsg.innerHTML = '🔒 <span>Locked — finish the entry above to unlock this one.</span>';
-      li.appendChild(lockedMsg);
+      bodyWrap.appendChild(lockedMsg);
     }
 
     // ---- reflection / completion ----
@@ -2190,6 +2232,9 @@
             return s;
           }).then(function () {
             saveStatus.hidden = true;
+            // Back to default collapse behavior for this one now that it's
+            // done -- the newly-active entry becomes the one that's expanded.
+            delete manualExpand[entry.id];
             renderAll();
           }).catch(function (err) {
             if (err && err.code === 'auth_expired') return;
@@ -2199,7 +2244,7 @@
           });
         });
       }
-      li.appendChild(reflectBlock);
+      bodyWrap.appendChild(reflectBlock);
     }
 
     // ---- teacher controls: edit / delete ----
@@ -2340,9 +2385,11 @@
         teacherControls.appendChild(deleteBtn);
       }
 
-      li.appendChild(teacherControls);
+      bodyWrap.appendChild(teacherControls);
     }
 
+    bodyWrap.hidden = !isExpanded;
+    li.appendChild(bodyWrap);
     return li;
   }
 
@@ -2355,9 +2402,12 @@
     ledgerEl.innerHTML = '';
     emptyState.hidden = entries.length > 0;
 
-    entries.forEach(function (entry, idx) {
-      ledgerEl.appendChild(buildEntryLi(entry, idx, lockInfo));
-    });
+    // Newest-added entry displayed first (like a journal/feed), while the
+    // curriculum sequence itself -- unlock order, "№" numbering, which one
+    // counts as "active" -- still follows the original array order below.
+    for (var i = entries.length - 1; i >= 0; i--) {
+      ledgerEl.appendChild(buildEntryLi(entries[i], i, lockInfo));
+    }
 
     var posted = entries.filter(function (e) { return !!e.completedAt; }).length;
     $('posted-count').textContent = String(posted);
