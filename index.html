@@ -1,0 +1,2389 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Learning Ledger</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+
+<style>
+  :root {
+    --paper: #f7f4fc;
+    --paper-band: #eee6f9;
+    --surface: #ffffff;
+    --ink: #251935;
+    --ink-soft: #4c3d68;
+    --muted: #8577a1;
+    --line: #ddd0ef;
+    --accent: #5c3d97;      /* deep violet — posted / completed */
+    --accent-soft: #ece2f9;
+    --active: #8d3fd6;      /* vivid purple — current / active entry */
+    --active-soft: #f2e7fc;
+    --warn: #a1447e;        /* warm magenta-rose */
+    --warn-soft: #f8e7f1;
+    --danger: #b23a5e;
+    --shadow: 0 1px 2px rgba(37,25,53,0.07), 0 6px 20px -8px rgba(37,25,53,0.2);
+
+    --cat-video-bg: #e7defb;
+    --cat-video-ink: #5c3d97;
+    --cat-paper-bg: #ece2f9;
+    --cat-paper-ink: #6d3fb0;
+    --cat-article-bg: #f2e7fc;
+    --cat-article-ink: #7c3fbf;
+    --cat-other-bg: #e2ddef;
+    --cat-other-ink: #574a75;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #150f20;
+      --paper-band: #1c1429;
+      --surface: #201832;
+      --ink: #ede6f8;
+      --ink-soft: #cabfe2;
+      --muted: #9587b4;
+      --line: #392c50;
+      --accent: #a97ee3;
+      --accent-soft: #2d2144;
+      --active: #c68ef6;
+      --active-soft: #302247;
+      --warn: #de93bb;
+      --warn-soft: #3a2536;
+      --danger: #e0839f;
+      --shadow: 0 1px 2px rgba(0,0,0,0.35), 0 6px 24px -8px rgba(0,0,0,0.55);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --paper: #150f20;
+    --paper-band: #1c1429;
+    --surface: #201832;
+    --ink: #ede6f8;
+    --ink-soft: #cabfe2;
+    --muted: #9587b4;
+    --line: #392c50;
+    --accent: #a97ee3;
+    --accent-soft: #2d2144;
+    --active: #c68ef6;
+    --active-soft: #302247;
+    --warn: #de93bb;
+    --warn-soft: #3a2536;
+    --danger: #e0839f;
+    --shadow: 0 1px 2px rgba(0,0,0,0.35), 0 6px 24px -8px rgba(0,0,0,0.55);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+
+  body {
+    background: var(--paper);
+    background-image: repeating-linear-gradient(
+      to bottom,
+      var(--paper) 0px,
+      var(--paper) 47px,
+      var(--paper-band) 47px,
+      var(--paper-band) 48px
+    );
+    color: var(--ink);
+    font-family: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+    font-size: 15.5px;
+    line-height: 1.55;
+    min-height: 100vh;
+  }
+
+  ::selection { background: var(--active-soft); }
+  a { color: var(--active); }
+
+  .wrap {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 40px 20px 100px;
+  }
+
+  [hidden] { display: none !important; }
+
+  /* ---------- Header ---------- */
+
+  header.masthead {
+    position: relative;
+    isolation: isolate;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 40px 20px 22px;
+    margin: -40px -20px 8px;
+    border-bottom: 2px solid var(--ink);
+    overflow: hidden;
+  }
+
+  header.masthead::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background:
+      radial-gradient(circle at 12% 20%, color-mix(in srgb, var(--warn) 35%, transparent), transparent 55%),
+      radial-gradient(circle at 38% 80%, color-mix(in srgb, var(--accent-soft) 80%, transparent), transparent 55%),
+      radial-gradient(circle at 68% 15%, color-mix(in srgb, var(--active) 35%, transparent), transparent 58%),
+      radial-gradient(circle at 92% 65%, color-mix(in srgb, var(--accent) 30%, transparent), transparent 55%),
+      radial-gradient(circle at 50% 45%, color-mix(in srgb, var(--active-soft) 70%, transparent), transparent 65%);
+    filter: blur(34px);
+    opacity: 0.8;
+  }
+
+  .masthead-title-block { flex: 1; min-width: 0; }
+
+  .brand-mark {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    vertical-align: middle;
+    margin-right: 2px;
+  }
+  .brand-mark circle { fill: var(--active); }
+  .brand-mark circle:nth-of-type(2), .brand-mark circle:nth-of-type(3) { fill: var(--accent); }
+  .brand-mark line { stroke: var(--muted); stroke-width: 1.4; }
+  @media (prefers-reduced-motion: no-preference) {
+    .brand-mark circle { animation: node-pulse 3.2s ease-in-out infinite; }
+    .brand-mark circle:nth-of-type(2) { animation-delay: .4s; }
+    .brand-mark circle:nth-of-type(3) { animation-delay: .8s; }
+    .brand-mark circle:nth-of-type(4) { animation-delay: 1.2s; }
+  }
+  @keyframes node-pulse {
+    0%, 100% { opacity: 0.55; }
+    50% { opacity: 1; }
+  }
+
+  .eyebrow {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+    display: block;
+    margin-bottom: 6px;
+  }
+
+  h1.course-title {
+    font-family: "Newsreader", Georgia, serif;
+    font-weight: 600;
+    font-size: clamp(28px, 5vw, 38px);
+    line-height: 1.12;
+    margin: 0;
+    text-wrap: balance;
+    outline: none;
+  }
+  h1.course-title[contenteditable="true"] { border-bottom: 1px dashed var(--active); cursor: text; }
+
+  p.course-sub {
+    margin: 8px 0 0;
+    color: var(--ink-soft);
+    font-size: 14.5px;
+    max-width: 46ch;
+    outline: none;
+  }
+  p.course-sub[contenteditable="true"] { border-bottom: 1px dashed var(--line); cursor: text; }
+
+  .mode-toggle {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 6px;
+  }
+
+  button.chip {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 11.5px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    color: var(--ink-soft);
+    padding: 7px 12px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: border-color .15s ease, color .15s ease, background .15s ease;
+  }
+  button.chip:hover { border-color: var(--muted); color: var(--ink); }
+  button.chip.is-on { background: var(--active); border-color: var(--active); color: white; }
+
+  .pin-popover {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    box-shadow: var(--shadow);
+    border-radius: 8px;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 200px;
+  }
+  .pin-popover[hidden] { display: none; }
+  .pin-popover label { font-size: 12px; color: var(--muted); }
+  .pin-popover input {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 15px;
+    letter-spacing: 0.2em;
+    padding: 7px 9px;
+    border: 1px solid var(--line);
+    border-radius: 5px;
+    background: var(--paper);
+    color: var(--ink);
+    width: 100%;
+  }
+  .pin-popover .pin-actions { display: flex; gap: 6px; }
+  .pin-popover .pin-actions button {
+    flex: 1;
+    font-size: 12px;
+    padding: 6px 8px;
+    border-radius: 5px;
+    border: 1px solid var(--line);
+    background: var(--paper);
+    color: var(--ink);
+    cursor: pointer;
+  }
+  .pin-popover .pin-actions button.primary { background: var(--active); border-color: var(--active); color: #fff; }
+  .pin-error { color: var(--danger); font-size: 11.5px; min-height: 14px; }
+
+  /* ---------- Ask Claude floating button ---------- */
+
+  .ask-claude-wrap {
+    position: fixed;
+    right: 20px;
+    bottom: 20px;
+    z-index: 40;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 10px;
+  }
+  .ask-claude-btn {
+    position: relative;
+    font-family: "IBM Plex Sans", sans-serif;
+    font-size: 13.5px;
+    font-weight: 600;
+    background: var(--active);
+    color: #fff;
+    border: none;
+    padding: 11px 18px;
+    border-radius: 999px;
+    cursor: pointer;
+    box-shadow: var(--shadow);
+  }
+  .ask-claude-btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 999px;
+    border: 1.5px solid var(--active);
+    opacity: 0;
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .ask-claude-btn::before { animation: ask-ring 2.6s ease-out infinite; }
+  }
+  @keyframes ask-ring {
+    0% { transform: scale(1); opacity: 0.6; }
+    100% { transform: scale(1.35); opacity: 0; }
+  }
+  .ask-claude-popover {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    box-shadow: var(--shadow);
+    border-radius: 10px;
+    padding: 14px;
+    width: min(300px, calc(100vw - 40px));
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .ask-claude-popover[hidden] { display: none; }
+  .ask-claude-popover label { font-size: 12px; color: var(--muted); }
+  .ask-claude-box {
+    min-height: 60px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: var(--paper);
+    padding: 8px 10px;
+    font-size: 13.5px;
+    color: var(--ink);
+    outline: none;
+  }
+  .ask-claude-box:focus { border-color: var(--active); }
+  .ask-claude-box:empty::before { content: attr(data-placeholder); color: var(--muted); }
+  .ask-claude-note { font-size: 11px; color: var(--muted); margin: 0; }
+
+  /* ---------- Progress ---------- */
+
+  .ledger-summary {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin: 22px 0 26px;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 12.5px;
+    color: var(--muted);
+  }
+  .ledger-summary strong { color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; }
+  .progress-track {
+    height: 6px;
+    background: var(--line);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-top: 22px;
+  }
+  .progress-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 3px;
+    transition: width .3s ease;
+  }
+
+  .sync-bar { display: flex; align-items: center; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
+  .sync-status { font-size: 12px; color: var(--muted); }
+  .sync-status.is-error { color: var(--danger); }
+
+  .fatal-banner {
+    background: var(--warn-soft);
+    color: var(--warn);
+    border: 1px solid var(--warn);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 13px;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .fatal-banner button { flex-shrink: 0; }
+
+  /* ---------- Teacher panel ---------- */
+
+  .teacher-panel {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 18px 18px 20px;
+    margin-bottom: 28px;
+    box-shadow: var(--shadow);
+  }
+  .teacher-panel[hidden] { display: none; }
+  .teacher-panel h2 {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 12px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--active);
+    margin: 0 0 14px;
+  }
+  .field-row { display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+  .field { flex: 1; min-width: 160px; display: flex; flex-direction: column; gap: 4px; }
+  .field label { font-size: 11.5px; color: var(--muted); }
+  .field input[type="text"], .field input[type="url"], .field input[type="date"], .field input[type="email"] {
+    padding: 8px 10px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: var(--paper);
+    color: var(--ink);
+    font-size: 14px;
+    font-family: inherit;
+    width: 100%;
+  }
+  .type-picker { display: flex; gap: 6px; flex-wrap: wrap; }
+  .type-btn {
+    font-size: 12.5px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: var(--paper);
+    color: var(--ink-soft);
+    cursor: pointer;
+  }
+  .type-btn.is-selected { background: var(--active-soft); border-color: var(--active); color: var(--active); font-weight: 600; }
+  .type-btn.is-selected[data-type="video"] { background: var(--cat-video-bg); border-color: var(--cat-video-ink); color: var(--cat-video-ink); }
+  .type-btn.is-selected[data-type="paper"] { background: var(--cat-paper-bg); border-color: var(--cat-paper-ink); color: var(--cat-paper-ink); }
+  .type-btn.is-selected[data-type="article"] { background: var(--cat-article-bg); border-color: var(--cat-article-ink); color: var(--cat-article-ink); }
+  .type-btn.is-selected[data-type="other"] { background: var(--cat-other-bg); border-color: var(--cat-other-ink); color: var(--cat-other-ink); }
+  .file-drop {
+    border: 1px dashed var(--line);
+    border-radius: 6px;
+    padding: 8px 10px;
+    font-size: 12.5px;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .file-drop input[type="file"] { font-size: 12px; max-width: 100%; }
+  .note-input {
+    min-height: 44px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: var(--paper);
+    padding: 8px 10px;
+    font-size: 13.5px;
+    color: var(--ink-soft);
+  }
+  .note-input:empty::before { content: attr(data-placeholder); color: var(--muted); }
+
+  .add-btn {
+    margin-top: 4px;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 12.5px;
+    letter-spacing: 0.04em;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    padding: 9px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  .add-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+  .form-error { color: var(--danger); font-size: 12px; min-height: 16px; margin-top: 2px; }
+  .form-status { color: var(--muted); font-size: 12px; min-height: 16px; margin-top: 2px; }
+
+  .settings-toggle {
+    font-size: 11.5px;
+    color: var(--muted);
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    text-decoration: underline;
+    margin-top: 12px;
+  }
+  .settings-panel { margin-top: 10px; }
+  .settings-panel[hidden] { display: none; }
+  .settings-group {
+    display: flex;
+    gap: 10px;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    padding: 12px 0;
+    border-top: 1px dashed var(--line);
+  }
+  .settings-group:first-child { border-top: none; padding-top: 0; }
+  .settings-msg { font-size: 12px; color: var(--accent); }
+
+  /* ---------- Entries ---------- */
+
+  ol.ledger { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 14px; }
+
+  li.entry {
+    position: relative;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-left: 4px solid var(--line);
+    border-radius: 8px;
+    padding: 16px 18px 18px;
+    box-shadow: var(--shadow);
+  }
+
+  li.entry.is-completed { border-left-color: var(--accent); }
+  li.entry.is-active { border-left-color: var(--active); }
+  li.entry.is-locked {
+    border-left-color: var(--line);
+    background: color-mix(in srgb, var(--surface) 70%, var(--paper));
+    opacity: 0.72;
+  }
+
+  .entry-top { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+
+  .entry-index {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 12px;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+    min-width: 28px;
+  }
+
+  .status-tag {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 10.5px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    border-radius: 999px;
+    font-weight: 600;
+  }
+  .status-tag.completed { background: var(--accent-soft); color: var(--accent); }
+  .status-tag.active { background: var(--active-soft); color: var(--active); }
+  .status-tag.locked { background: transparent; color: var(--muted); border: 1px solid var(--line); }
+
+  .type-badge {
+    font-size: 11.5px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    border-radius: 999px;
+    background: var(--cat-other-bg);
+    color: var(--cat-other-ink);
+  }
+  .type-badge[data-cat="video"] { background: var(--cat-video-bg); color: var(--cat-video-ink); }
+  .type-badge[data-cat="paper"] { background: var(--cat-paper-bg); color: var(--cat-paper-ink); }
+  .type-badge[data-cat="article"] { background: var(--cat-article-bg); color: var(--cat-article-ink); }
+  .type-badge[data-cat="other"] { background: var(--cat-other-bg); color: var(--cat-other-ink); }
+
+  .deadline-pill {
+    margin-left: auto;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 11px;
+    color: var(--muted);
+    background: var(--paper);
+    border: 1px solid var(--line);
+    padding: 3px 8px;
+    border-radius: 999px;
+    white-space: nowrap;
+  }
+  .deadline-pill.is-overdue { color: var(--danger); border-color: var(--danger); background: var(--warn-soft); }
+  .deadline-pill.is-done { color: var(--muted); border-color: var(--line); }
+
+  .entry-title-display {
+    font-family: "Newsreader", Georgia, serif;
+    font-size: 20px;
+    font-weight: 600;
+    margin: 0 0 6px;
+    color: var(--ink);
+  }
+  .entry-title-input {
+    font-family: "Newsreader", Georgia, serif;
+    font-size: 20px;
+    font-weight: 600;
+    width: 100%;
+    border: none;
+    border-bottom: 1px dashed var(--active);
+    background: transparent;
+    color: var(--ink);
+    padding: 0 0 6px;
+    outline: none;
+    margin-bottom: 6px;
+  }
+
+  .entry-link-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+  .entry-link-text {
+    flex: 1;
+    min-width: 140px;
+    font-size: 13px;
+    color: var(--active);
+    font-family: "IBM Plex Mono", monospace;
+    word-break: break-all;
+  }
+
+  .open-link {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 12.5px;
+    text-decoration: none;
+    background: var(--active-soft);
+    color: var(--active);
+    padding: 6px 12px;
+    border-radius: 999px;
+    white-space: nowrap;
+    border: none;
+    cursor: pointer;
+  }
+  .open-link.is-disabled { pointer-events: none; opacity: 0.4; }
+
+  .attach-name { font-size: 12px; color: var(--muted); font-family: "IBM Plex Mono", monospace; }
+
+  .pdf-preview {
+    width: 100%;
+    height: 460px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    margin-bottom: 12px;
+    background: var(--paper);
+  }
+  .pdf-preview[hidden] { display: none; }
+
+  .teacher-note {
+    font-size: 13.5px;
+    color: var(--ink-soft);
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 8px 10px;
+    margin-bottom: 12px;
+    white-space: pre-wrap;
+  }
+  .teacher-note.is-empty-locked { display: none; }
+  .teacher-note-input {
+    min-height: 44px;
+    border: 1px solid var(--active);
+    border-radius: 6px;
+    background: var(--paper);
+    padding: 8px 10px;
+    font-size: 13.5px;
+    color: var(--ink-soft);
+    margin-bottom: 12px;
+  }
+  .teacher-note-input:empty::before { content: attr(data-placeholder); color: var(--muted); }
+
+  .locked-msg {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 12.5px;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .reflect-block { margin-top: 12px; }
+  .reflect-block label {
+    display: block;
+    font-size: 11.5px;
+    letter-spacing: 0.03em;
+    color: var(--muted);
+    text-transform: uppercase;
+    font-family: "IBM Plex Mono", monospace;
+    margin-bottom: 5px;
+  }
+  .reflect-box, .question-box {
+    min-height: 60px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: var(--paper);
+    padding: 9px 11px;
+    font-size: 14px;
+    color: var(--ink);
+    margin-bottom: 12px;
+    outline: none;
+    white-space: pre-wrap;
+  }
+  .reflect-box:focus, .question-box:focus { border-color: var(--active); }
+  .reflect-box:empty::before, .question-box:empty::before { content: attr(data-placeholder); color: var(--muted); }
+  .reflect-box[contenteditable="false"], .question-box[contenteditable="false"] {
+    background: var(--surface);
+    color: var(--ink-soft);
+  }
+
+  .entry-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+
+  button.complete-btn {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 12.5px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    padding: 9px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  button.complete-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+  .complete-hint { font-size: 11.5px; color: var(--muted); }
+  .save-status { font-size: 12px; color: var(--muted); margin-top: 6px; }
+  .save-status[hidden] { display: none; }
+  .save-status.is-error { color: var(--danger); }
+
+  .posted-badge {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 12px;
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .entry-teacher-controls {
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px dashed var(--line);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .entry-teacher-controls[hidden] { display: none; }
+  .small-btn {
+    font-size: 12px;
+    padding: 5px 10px;
+    border-radius: 5px;
+    border: 1px solid var(--line);
+    background: var(--paper);
+    color: var(--ink-soft);
+    cursor: pointer;
+  }
+  .small-btn.danger { color: var(--danger); border-color: var(--danger); }
+  .small-btn.warn { color: var(--warn); border-color: var(--warn); }
+  .small-btn.primary { background: var(--active); border-color: var(--active); color: #fff; }
+
+  .reached-warning {
+    font-size: 11.5px;
+    color: var(--warn);
+    background: var(--warn-soft);
+    border-radius: 5px;
+    padding: 6px 9px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 10px;
+    width: 100%;
+  }
+
+  .edit-field-row { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; }
+  .edit-field-row label { font-size: 11px; color: var(--muted); font-family: "IBM Plex Mono", monospace; text-transform: uppercase; letter-spacing: 0.04em; }
+  .edit-field-row input[type="text"], .edit-field-row input[type="url"], .edit-field-row input[type="date"] {
+    padding: 7px 9px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: var(--paper);
+    color: var(--ink);
+    font-size: 13.5px;
+    font-family: inherit;
+  }
+
+  /* ---------- General questions (not tied to a specific entry) ---------- */
+
+  .general-qa {
+    margin-bottom: 26px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--surface);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+  .qa-toggle {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 14px 18px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-family: "IBM Plex Sans", sans-serif;
+    font-size: 14.5px;
+    font-weight: 600;
+    color: var(--ink);
+    text-align: left;
+  }
+  .qa-toggle-count {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 11px;
+    background: var(--active-soft);
+    color: var(--active);
+    padding: 2px 8px;
+    border-radius: 999px;
+  }
+  .qa-body { padding: 0 18px 18px; }
+  .qa-body[hidden] { display: none; }
+  .qa-sub { font-size: 13px; color: var(--muted); margin: 0 0 12px; }
+  .qa-composer { display: flex; gap: 8px; align-items: flex-end; margin-bottom: 16px; }
+  .qa-composer-box {
+    flex: 1;
+    min-height: 44px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: var(--paper);
+    padding: 9px 11px;
+    font-size: 14px;
+    color: var(--ink);
+    outline: none;
+  }
+  .qa-composer-box:focus { border-color: var(--active); }
+  .qa-composer-box:empty::before { content: attr(data-placeholder); color: var(--muted); }
+  .qa-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+  .qa-empty[hidden] { display: none; }
+  .qa-empty { font-size: 13px; color: var(--muted); text-align: center; padding: 10px 0; }
+
+  li.qa-item {
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 12px 14px;
+    background: var(--paper);
+  }
+  .qa-thread-badge {
+    float: right;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: var(--warn-soft);
+    color: var(--warn);
+  }
+  .qa-thread-badge[data-state="answered"] { background: var(--active-soft); color: var(--active); }
+  .qa-messages { list-style: none; margin: 0 0 10px; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+  li.qa-msg {
+    max-width: 88%;
+    border-radius: 8px;
+    padding: 8px 10px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+  }
+  li.qa-msg[data-from="student"] { margin-right: auto; }
+  li.qa-msg[data-from="teacher"] { margin-left: auto; background: var(--accent-soft); border-color: var(--accent-soft); }
+  .qa-msg-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; margin-bottom: 3px; }
+  .qa-msg-from {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--muted);
+  }
+  li.qa-msg[data-from="teacher"] .qa-msg-from { color: var(--accent); }
+  .qa-msg-date { font-family: "IBM Plex Mono", monospace; font-size: 10px; color: var(--muted); white-space: nowrap; }
+  .qa-msg-text { font-size: 13.5px; color: var(--ink-soft); white-space: pre-wrap; }
+  .qa-reply-row { display: flex; gap: 8px; align-items: flex-end; }
+  .qa-reply-box {
+    flex: 1;
+    min-height: 38px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: var(--surface);
+    padding: 8px 10px;
+    font-size: 13.5px;
+    color: var(--ink);
+    outline: none;
+  }
+  .qa-reply-box:focus { border-color: var(--active); }
+  .qa-reply-box:empty::before { content: attr(data-placeholder); color: var(--muted); font-style: italic; }
+
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--muted);
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 13px;
+    border: 1px dashed var(--line);
+    border-radius: 10px;
+  }
+  .empty-state[hidden] { display: none; }
+
+  footer.note {
+    margin-top: 40px;
+    text-align: center;
+    font-size: 11.5px;
+    color: var(--muted);
+    font-family: "IBM Plex Mono", monospace;
+  }
+
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+
+  /* ---------- modal overlay ---------- */
+  .overlay {
+    position: fixed; inset: 0;
+    background: rgba(20,15,28,0.5);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 50;
+    padding: 20px;
+  }
+  .overlay[hidden] { display: none; }
+  .modal {
+    background: var(--surface);
+    border-radius: 10px;
+    padding: 20px;
+    max-width: 340px;
+    box-shadow: var(--shadow);
+  }
+  .modal p { font-size: 14px; color: var(--ink-soft); margin: 0 0 16px; }
+  .modal .modal-actions { display: flex; gap: 8px; justify-content: flex-end; }
+  .modal button {
+    font-size: 13px;
+    padding: 7px 14px;
+    border-radius: 6px;
+    border: 1px solid var(--line);
+    background: var(--paper);
+    color: var(--ink);
+    cursor: pointer;
+  }
+  .modal button.primary { background: var(--danger); border-color: var(--danger); color: #fff; }
+
+  .gate-modal { max-width: 320px; text-align: center; }
+  .gate-modal .eyebrow { display: inline-block; }
+  .gate-modal .modal-actions .primary { background: var(--active); border-color: var(--active); }
+  .gate-input {
+    width: 100%;
+    margin: 14px 0 4px;
+    padding: 10px 12px;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 15px;
+    letter-spacing: 0.08em;
+    text-align: center;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: var(--paper);
+    color: var(--ink);
+  }
+
+  /* ---------- sign-in / loading screens ---------- */
+  .full-screen {
+    position: fixed; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--paper);
+    z-index: 100;
+    padding: 20px;
+  }
+  .full-screen[hidden] { display: none; }
+  .signin-card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    padding: 32px 28px;
+    max-width: 380px;
+    text-align: center;
+  }
+  .signin-card h1 {
+    font-family: "Newsreader", Georgia, serif;
+    font-size: 26px;
+    font-weight: 600;
+    margin: 10px 0 8px;
+  }
+  .signin-card p { color: var(--ink-soft); font-size: 14px; margin: 0 0 20px; }
+  .google-btn {
+    font-family: "IBM Plex Sans", sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    background: var(--active);
+    color: #fff;
+    border: none;
+    padding: 12px 22px;
+    border-radius: 8px;
+    cursor: pointer;
+    width: 100%;
+  }
+  .google-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .spinner {
+    width: 28px; height: 28px;
+    border: 3px solid var(--line);
+    border-top-color: var(--active);
+    border-radius: 50%;
+    margin: 0 auto 14px;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<!-- ============================================================= -->
+<!-- Sign-in screen: shown first, before any Drive/state activity. -->
+<!-- ============================================================= -->
+<div class="full-screen" id="signin-screen">
+  <div class="signin-card">
+    <svg class="brand-mark" width="36" height="17" viewBox="0 0 30 14" aria-hidden="true" style="margin-bottom:6px;">
+      <line x1="4" y1="7" x2="15" y2="3" />
+      <line x1="15" y1="3" x2="26" y2="7" />
+      <line x1="4" y1="7" x2="15" y2="11" />
+      <line x1="15" y1="11" x2="26" y2="7" />
+      <circle cx="4" cy="7" r="2.6" />
+      <circle cx="15" cy="3" r="2.6" />
+      <circle cx="15" cy="11" r="2.6" />
+      <circle cx="26" cy="7" r="2.6" />
+    </svg>
+    <span class="eyebrow">Learning Ledger</span>
+    <h1>Sign in to continue</h1>
+    <p>Your progress is stored in a shared Google Drive folder. Sign in with the Google account your teacher shared that folder with.</p>
+    <button class="google-btn" id="google-signin-btn" type="button">Sign in with Google</button>
+    <div class="pin-error" id="signin-error" style="margin-top:10px;"></div>
+  </div>
+</div>
+
+<!-- ============================================================= -->
+<!-- Loading screen: shown while the first Drive read/create runs. -->
+<!-- ============================================================= -->
+<div class="full-screen" id="loading-screen" hidden>
+  <div class="signin-card">
+    <div class="spinner"></div>
+    <p style="margin:0;">Loading your shared ledger…</p>
+  </div>
+</div>
+
+<!-- ============================================================= -->
+<!-- Site passcode gate: separate from Google sign-in, exactly as  -->
+<!-- in the original spec — gates entering the portal's content.   -->
+<!-- ============================================================= -->
+<div class="overlay" id="site-gate" hidden>
+  <div class="modal gate-modal">
+    <span class="eyebrow">Learning Ledger</span>
+    <p style="margin-top:6px;">This is a private portal. Enter the passcode to continue.</p>
+    <input type="text" id="gate-input" autocomplete="off" placeholder="Passcode" class="gate-input">
+    <div class="pin-error" id="gate-error"></div>
+    <div class="modal-actions" style="justify-content: stretch;">
+      <button type="button" id="gate-submit" class="primary" style="width:100%;">Enter</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="confirm-overlay" hidden>
+  <div class="modal">
+    <p id="confirm-text">Are you sure?</p>
+    <div class="modal-actions">
+      <button type="button" id="confirm-cancel">Cancel</button>
+      <button type="button" id="confirm-ok" class="primary">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================= -->
+<!-- Main app — hidden until Google sign-in + passcode both pass.  -->
+<!-- ============================================================= -->
+<div class="wrap" id="app-root" hidden>
+
+  <header class="masthead">
+    <div class="masthead-title-block">
+      <span class="eyebrow">
+        <svg class="brand-mark" width="30" height="14" viewBox="0 0 30 14" aria-hidden="true">
+          <line x1="4" y1="7" x2="15" y2="3" />
+          <line x1="15" y1="3" x2="26" y2="7" />
+          <line x1="4" y1="7" x2="15" y2="11" />
+          <line x1="15" y1="11" x2="26" y2="7" />
+          <circle cx="4" cy="7" r="2.6" />
+          <circle cx="15" cy="3" r="2.6" />
+          <circle cx="15" cy="11" r="2.6" />
+          <circle cx="26" cy="7" r="2.6" />
+        </svg>
+        Learning Ledger
+      </span>
+      <h1 class="course-title" id="course-title" contenteditable="false"></h1>
+      <p class="course-sub" id="course-sub" contenteditable="false"></p>
+    </div>
+    <div class="mode-toggle">
+      <button class="chip" id="mode-btn" type="button">Student view</button>
+      <div class="pin-popover" id="pin-popover" hidden>
+        <label for="pin-input">Enter passcode</label>
+        <input type="text" id="pin-input" autocomplete="off">
+        <div class="pin-error" id="pin-error"></div>
+        <div class="pin-actions">
+          <button type="button" id="pin-cancel">Cancel</button>
+          <button type="button" id="pin-submit" class="primary">Unlock</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="fatal-banner" id="fatal-banner" hidden>
+    <span id="fatal-banner-text"></span>
+    <button class="small-btn" id="fatal-banner-retry" type="button">Retry</button>
+  </div>
+
+  <div class="ledger-summary">
+    <span><strong id="posted-count">0</strong> of <strong id="total-count">0</strong> entries posted</span>
+    <span id="active-label">No entries yet</span>
+  </div>
+  <div class="progress-track"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+
+  <div class="sync-bar" id="sync-bar">
+    <button class="small-btn" id="refresh-btn" type="button">🔄 Refresh</button>
+    <span class="sync-status" id="sync-status"></span>
+  </div>
+
+  <section class="general-qa">
+    <button class="qa-toggle" id="qa-toggle" type="button">
+      <span>💬 Ask your teacher something</span>
+      <span class="qa-toggle-count" id="qa-toggle-count" hidden></span>
+    </button>
+    <div class="qa-body" id="qa-body" hidden>
+      <p class="qa-sub">Not about a specific entry — ask anything, anytime.</p>
+      <div class="qa-composer" id="qa-composer">
+        <div class="qa-composer-box" id="qa-composer-box" contenteditable="true" data-placeholder="Type your question here..."></div>
+        <button class="small-btn" id="qa-send-btn" type="button">Send</button>
+      </div>
+      <div class="save-status" id="qa-composer-status" hidden></div>
+      <ol class="qa-list" id="qa-list"></ol>
+      <p class="qa-empty" id="qa-empty" hidden>No questions yet.</p>
+    </div>
+  </section>
+
+  <section class="teacher-panel" id="teacher-panel" hidden>
+    <h2>Add a new entry</h2>
+    <div class="field-row">
+      <div class="field" style="flex:2">
+        <label for="new-title">Title</label>
+        <input type="text" id="new-title" placeholder="e.g. Andrew Ng — What is a neural network?">
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Type</label>
+        <div class="type-picker" id="new-type-picker">
+          <button type="button" class="type-btn is-selected" data-type="video">🎥 Video</button>
+          <button type="button" class="type-btn" data-type="paper">📄 Paper</button>
+          <button type="button" class="type-btn" data-type="article">📰 Article</button>
+          <button type="button" class="type-btn" data-type="other">🔖 Other</button>
+        </div>
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label for="new-url">Link (URL)</label>
+        <input type="url" id="new-url" placeholder="https://...">
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Or attach a PDF instead (under 4&nbsp;MB)</label>
+        <div class="file-drop">
+          <input type="file" id="new-file" accept="application/pdf">
+        </div>
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label for="new-deadline">Deadline (optional)</label>
+        <input type="date" id="new-deadline">
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Note for her (optional — instructions, context)</label>
+        <div class="note-input" id="new-note" contenteditable="true" data-placeholder="Anything she should know before starting this one..."></div>
+      </div>
+    </div>
+    <div class="form-error" id="new-error"></div>
+    <button class="add-btn" id="add-btn" type="button">+ Add entry</button>
+    <div class="form-status" id="new-status"></div>
+
+    <button class="settings-toggle" id="settings-toggle" type="button">Portal settings</button>
+    <div class="settings-panel" id="settings-panel" hidden>
+      <div class="settings-group">
+        <div class="field">
+          <label for="new-pin">Change passcode</label>
+          <input type="text" id="new-pin" autocomplete="off">
+        </div>
+        <button class="small-btn" id="save-pin-btn" type="button">Save</button>
+        <span id="pin-saved-msg" class="settings-msg"></span>
+      </div>
+    </div>
+  </section>
+
+  <div class="empty-state" id="empty-state">No entries yet. Once your teacher posts the first one, it'll show up here.</div>
+
+  <ol class="ledger" id="ledger"></ol>
+
+  <footer class="note">Write what you learned to post an entry and unlock the next one.</footer>
+</div>
+
+<div class="ask-claude-wrap" id="ask-claude-wrap" hidden>
+  <button class="ask-claude-btn" id="ask-claude-btn" type="button">✦ Ask Claude</button>
+  <div class="ask-claude-popover" id="ask-claude-popover" hidden>
+    <label for="ask-claude-input">Ask Claude anything about what you're learning</label>
+    <div class="ask-claude-box" id="ask-claude-input" contenteditable="true" data-placeholder="e.g. What's the difference between supervised and unsupervised learning?"></div>
+    <p class="ask-claude-note">Opens a new tab with Claude — this leaves the portal.</p>
+    <div class="pin-actions">
+      <button type="button" id="ask-claude-cancel">Cancel</button>
+      <button type="button" id="ask-claude-go" class="primary">Open Claude →</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script>
+(function () {
+  "use strict";
+
+  // =============================================================
+  // CONFIG — fill these in before publishing to GitHub Pages.
+  // See github-pages-publishing.md for exactly where each value
+  // comes from.
+  // =============================================================
+  var CONFIG = {
+    // OAuth Client ID from Google Cloud Console → APIs & Services → Credentials
+    // (a Web application OAuth client). Looks like "123...-abc....apps.googleusercontent.com".
+    CLIENT_ID: '689999239427-emnv3vkmhgjj0cvopvd01fc28on5slm3.apps.googleusercontent.com',
+
+    // The ID of the shared Google Drive folder both teacher and student have
+    // Editor access to. Find it in the folder's URL:
+    // https://drive.google.com/drive/folders/<THIS_IS_THE_FOLDER_ID>
+    FOLDER_ID: '1u7cOTiEL12AgP2EYa-EeF3AhaqUtPg5v'
+  };
+
+  var DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive';
+  var STATE_FILENAME = 'ledger-state.json';
+  var DEFAULT_PASSCODE = 'afnan87';
+  var PDF_MAX_BYTES = 4 * 1024 * 1024;
+
+  // ---------------- tiny DOM helpers ----------------
+  function $(id) { return document.getElementById(id); }
+  function textOf(el) { return (el.textContent || '').replace(/ /g, ' ').trim(); }
+
+  function fmtDate(iso) {
+    if (!iso) return '';
+    try {
+      var d = new Date(iso);
+      if (isNaN(d.getTime())) return '';
+      return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+    } catch (e) { return ''; }
+  }
+  function fmtDateTime(iso) {
+    if (!iso) return '';
+    try {
+      var d = new Date(iso);
+      return fmtDate(iso) + ', ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } catch (e) { return ''; }
+  }
+  function typeIcon(t) { return t === 'video' ? '🎥' : t === 'paper' ? '📄' : t === 'article' ? '📰' : '🔖'; }
+  function typeLabel(t) { return t === 'video' ? 'Video' : t === 'paper' ? 'Paper' : t === 'article' ? 'Article' : 'Other'; }
+
+  function newId(prefix) {
+    var rand = (window.crypto && window.crypto.randomUUID) ? window.crypto.randomUUID() : (Date.now().toString(36) + Math.random().toString(36).slice(2));
+    return prefix + '-' + rand;
+  }
+
+  function wirePlainTextEditable(el) {
+    if (!el || el.__wired) return;
+    el.__wired = true;
+    el.addEventListener('keydown', function (e) {
+      if (e.key !== 'Enter') return;
+      e.preventDefault();
+      var sel = window.getSelection();
+      if (!sel.rangeCount) return;
+      var range = sel.getRangeAt(0);
+      range.deleteContents();
+      var nl = document.createTextNode('\n');
+      range.insertNode(nl);
+      range.setStartAfter(nl);
+      range.setEndAfter(nl);
+      sel.removeAllRanges();
+      sel.addRange(range);
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    el.addEventListener('paste', function (e) {
+      e.preventDefault();
+      var text = (e.clipboardData || window.clipboardData).getData('text/plain');
+      var sel = window.getSelection();
+      if (!sel.rangeCount) return;
+      var range = sel.getRangeAt(0);
+      range.deleteContents();
+      var node = document.createTextNode(text);
+      range.insertNode(node);
+      range.setStartAfter(node);
+      range.setEndAfter(node);
+      sel.removeAllRanges();
+      sel.addRange(range);
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+  }
+
+  function showConfirm(message, onConfirm) {
+    var overlay = $('confirm-overlay');
+    $('confirm-text').textContent = message;
+    overlay.hidden = false;
+    var okBtn = $('confirm-ok');
+    var cancelBtn = $('confirm-cancel');
+    function cleanup() {
+      overlay.hidden = true;
+      okBtn.removeEventListener('click', onOk);
+      cancelBtn.removeEventListener('click', onCancel);
+    }
+    function onOk() { cleanup(); onConfirm(); }
+    function onCancel() { cleanup(); }
+    okBtn.addEventListener('click', onOk);
+    cancelBtn.addEventListener('click', onCancel);
+  }
+
+  // =============================================================
+  // Google sign-in (Google Identity Services token client)
+  // =============================================================
+  var tokenClient = null;
+  var accessToken = null;
+  var tokenExpiresAt = 0;
+
+  function initGoogleAuth() {
+    if (!window.google || !window.google.accounts || !window.google.accounts.oauth2) {
+      showSigninError('Could not load Google Sign-In. Check your connection and reload the page.');
+      return;
+    }
+    tokenClient = window.google.accounts.oauth2.initTokenClient({
+      client_id: CONFIG.CLIENT_ID,
+      scope: DRIVE_SCOPE,
+      callback: handleTokenResponse
+    });
+    $('google-signin-btn').disabled = false;
+  }
+
+  function handleTokenResponse(resp) {
+    $('google-signin-btn').disabled = false;
+    if (resp && resp.access_token) {
+      accessToken = resp.access_token;
+      var expiresInSec = resp.expires_in || 3600;
+      tokenExpiresAt = Date.now() + (expiresInSec * 1000) - 60000; // 60s safety buffer
+      $('signin-error').textContent = '';
+      $('signin-screen').hidden = true;
+      bootApp();
+    } else {
+      showSigninError('Sign-in did not complete — please try again.');
+    }
+  }
+
+  function showSigninError(msg) {
+    $('signin-error').textContent = msg;
+    $('signin-screen').hidden = false;
+    $('loading-screen').hidden = true;
+  }
+
+  function tokenIsValid() {
+    return !!accessToken && Date.now() < tokenExpiresAt;
+  }
+
+  // Called whenever a Drive call comes back 401, or we notice the token has
+  // aged out client-side. Sends the user back to the sign-in screen rather
+  // than failing silently, per the spec's "handle token expiry gracefully".
+  function handleAuthExpired() {
+    accessToken = null;
+    tokenExpiresAt = 0;
+    $('app-root').hidden = true;
+    $('loading-screen').hidden = true;
+    showSigninError('Your Google sign-in expired — please sign in again to keep syncing.');
+  }
+
+  $('google-signin-btn').addEventListener('click', function () {
+    if (!tokenClient) { showSigninError('Google sign-in is still loading — try again in a moment.'); return; }
+    $('signin-error').textContent = '';
+    $('google-signin-btn').disabled = true;
+    tokenClient.requestAccessToken({ prompt: '' });
+  });
+
+  window.addEventListener('load', function () {
+    // A short delay isn't needed in real browsers (the GIS <script> is a load-
+    // blocking resource so window 'load' already waits for it), but guard
+    // against it not being present at all.
+    initGoogleAuth();
+  });
+
+  // =============================================================
+  // Google Drive REST v3 access — the actual persistence layer.
+  // =============================================================
+
+  var stateFileId = null;
+
+  function driveFetch(url, opts) {
+    opts = opts || {};
+    if (!tokenIsValid()) {
+      handleAuthExpired();
+      return Promise.reject({ code: 'auth_expired', message: 'Google sign-in expired.' });
+    }
+    opts.headers = Object.assign({}, opts.headers, { Authorization: 'Bearer ' + accessToken });
+    return fetch(url, opts).then(function (res) {
+      if (res.status === 401) {
+        handleAuthExpired();
+        return Promise.reject({ code: 'auth_expired', message: 'Google sign-in expired.' });
+      }
+      if (!res.ok) {
+        return res.text().then(function (t) {
+          return Promise.reject({ code: 'drive_error', message: 'Drive API error ' + res.status + ': ' + t.slice(0, 200) });
+        });
+      }
+      return res;
+    }, function (err) {
+      return Promise.reject({ code: 'network_error', message: (err && err.message) || 'Network error reaching Google Drive.' });
+    });
+  }
+
+  function defaultState() {
+    return {
+      version: 1,
+      courseTitle: 'Your AI & ML Journey',
+      courseSub: "A running record of what you've watched, read, and learned — one entry unlocks the next.",
+      entries: [],
+      qaThreads: {},
+      settings: { passcode: DEFAULT_PASSCODE }
+    };
+  }
+
+  // Fills in anything missing from an older/partial state file so the app
+  // never crashes on a state document written by an earlier version of this
+  // page — this is part of never letting a code update destroy or choke on
+  // existing Drive data.
+  function normalizeState(s) {
+    s = s && typeof s === 'object' ? s : {};
+    if (typeof s.version !== 'number') s.version = 1;
+    if (typeof s.courseTitle !== 'string') s.courseTitle = defaultState().courseTitle;
+    if (typeof s.courseSub !== 'string') s.courseSub = defaultState().courseSub;
+    if (!Array.isArray(s.entries)) s.entries = [];
+    if (!s.qaThreads || typeof s.qaThreads !== 'object') s.qaThreads = {};
+    if (!s.settings || typeof s.settings !== 'object') s.settings = {};
+    if (typeof s.settings.passcode !== 'string' || !s.settings.passcode) s.settings.passcode = DEFAULT_PASSCODE;
+    return s;
+  }
+
+  function findStateFile() {
+    var q = "'" + CONFIG.FOLDER_ID + "' in parents and name='" + STATE_FILENAME + "' and trashed=false";
+    var url = 'https://www.googleapis.com/drive/v3/files?q=' + encodeURIComponent(q) + '&fields=' + encodeURIComponent('files(id,name)');
+    return driveFetch(url).then(function (res) { return res.json(); }).then(function (data) {
+      var files = (data && data.files) || [];
+      return files.length ? files[0] : null;
+    });
+  }
+
+  function multipartBody(boundary, metadata, contentPart, contentType) {
+    var head = '--' + boundary + '\r\n' +
+      'Content-Type: application/json; charset=UTF-8\r\n\r\n' +
+      JSON.stringify(metadata) + '\r\n' +
+      '--' + boundary + '\r\n' +
+      'Content-Type: ' + contentType + '\r\n\r\n';
+    var tail = '\r\n--' + boundary + '--';
+    return new Blob([head, contentPart, tail]);
+  }
+
+  function createStateFile(state) {
+    var boundary = 'ledgerbnd' + Math.random().toString(36).slice(2);
+    var metadata = { name: STATE_FILENAME, parents: [CONFIG.FOLDER_ID], mimeType: 'application/json' };
+    var body = multipartBody(boundary, metadata, JSON.stringify(state), 'application/json');
+    var url = 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=' + encodeURIComponent('id');
+    return driveFetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'multipart/related; boundary=' + boundary },
+      body: body
+    }).then(function (res) { return res.json(); }).then(function (data) { return data.id; });
+  }
+
+  function readStateFile(fileId) {
+    var url = 'https://www.googleapis.com/drive/v3/files/' + fileId + '?alt=media';
+    return driveFetch(url).then(function (res) { return res.text(); }).then(function (text) {
+      if (!text) return defaultState();
+      try { return normalizeState(JSON.parse(text)); }
+      catch (e) { return defaultState(); }
+    });
+  }
+
+  function writeStateFile(fileId, state) {
+    var url = 'https://www.googleapis.com/upload/drive/v3/files/' + fileId + '?uploadType=media';
+    return driveFetch(url, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(state)
+    });
+  }
+
+  // find-or-create + read. Never overwrites an existing file's content —
+  // only ever creates one when none exists yet.
+  function loadState() {
+    return findStateFile().then(function (file) {
+      if (!file) {
+        var fresh = defaultState();
+        return createStateFile(fresh).then(function (id) {
+          stateFileId = id;
+          return fresh;
+        });
+      }
+      stateFileId = file.id;
+      return readStateFile(stateFileId);
+    });
+  }
+
+  // Read-modify-write: always re-reads the latest Drive content immediately
+  // before applying this mutation and writing back, so a save from one
+  // browser doesn't wholesale clobber a change the other browser made in
+  // between — this is the "loadState/saveState must be a proper merge/
+  // round-trip, never a reset" requirement. `mutator(state)` may mutate in
+  // place and/or return a replacement object.
+  function saveState(mutator) {
+    var readP = stateFileId ? readStateFile(stateFileId) : loadState();
+    return readP.then(function (latest) {
+      var updated = mutator(latest) || latest;
+      updated = normalizeState(updated);
+      return writeStateFile(stateFileId, updated).then(function () {
+        state = updated;
+        return updated;
+      });
+    });
+  }
+
+  function uploadPdf(file) {
+    var boundary = 'pdfbnd' + Math.random().toString(36).slice(2);
+    var metadata = { name: file.name, parents: [CONFIG.FOLDER_ID], mimeType: file.type || 'application/pdf' };
+    var body = multipartBody(boundary, metadata, file, file.type || 'application/pdf');
+    var url = 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=' + encodeURIComponent('id');
+    return driveFetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'multipart/related; boundary=' + boundary },
+      body: body
+    }).then(function (res) { return res.json(); }).then(function (data) { return data.id; });
+  }
+
+  function fetchPdfObjectUrl(fileId) {
+    var url = 'https://www.googleapis.com/drive/v3/files/' + fileId + '?alt=media';
+    return driveFetch(url).then(function (res) { return res.blob(); }).then(function (blob) {
+      return URL.createObjectURL(blob);
+    });
+  }
+
+  function deleteDriveFileBestEffort(fileId) {
+    if (!fileId) return;
+    driveFetch('https://www.googleapis.com/drive/v3/files/' + fileId, { method: 'DELETE' }).catch(function () {});
+  }
+
+  // =============================================================
+  // App state + boot sequence
+  // =============================================================
+  var state = defaultState();
+  var isTeacherMode = false;
+  var forceEditIds = {};     // entryId -> true, while "Edit anyway" override is active this session
+  var editingIds = {};       // entryId -> true, while an unreached entry is in its own edit form
+  var qaDrafts = {};         // threadId -> draft reply text
+  var pendingAttachment = null; // { file, name }
+  var selectedType = 'video';
+
+  function bootApp() {
+    $('loading-screen').hidden = false;
+    $('fatal-banner').hidden = true;
+    loadState().then(function (s) {
+      state = s;
+      $('loading-screen').hidden = true;
+      showSiteGateIfNeeded();
+      setSyncStatus('Synced ' + fmtDateTime(new Date().toISOString()));
+    }).catch(function (err) {
+      $('loading-screen').hidden = true;
+      if (err && err.code === 'auth_expired') return; // already routed to sign-in
+      showFatal(driveErrorMessage(err));
+    });
+  }
+
+  function driveErrorMessage(err) {
+    var code = err && err.code;
+    if (code === 'network_error') return "Couldn't reach Google Drive — check your connection and retry.";
+    if (code === 'drive_error') return "Google Drive returned an error. Double-check the shared folder ID in CONFIG, and that this Google account has access to it. (" + (err.message || '') + ')';
+    return "Something went wrong loading your shared ledger. (" + ((err && err.message) || 'unknown error') + ')';
+  }
+
+  function showFatal(msg) {
+    $('fatal-banner-text').textContent = msg;
+    $('fatal-banner').hidden = false;
+  }
+
+  $('fatal-banner-retry').addEventListener('click', function () {
+    $('fatal-banner').hidden = true;
+    bootApp();
+  });
+
+  function setSyncStatus(text, isError) {
+    var el = $('sync-status');
+    el.textContent = text;
+    el.classList.toggle('is-error', !!isError);
+  }
+
+  $('refresh-btn').addEventListener('click', function () {
+    var btn = $('refresh-btn');
+    btn.disabled = true;
+    setSyncStatus('Refreshing…');
+    (stateFileId ? readStateFile(stateFileId) : loadState()).then(function (s) {
+      state = s;
+      renderAll();
+      setSyncStatus('Synced ' + fmtDateTime(new Date().toISOString()));
+    }).catch(function (err) {
+      if (!(err && err.code === 'auth_expired')) setSyncStatus(driveErrorMessage(err), true);
+    }).then(function () { btn.disabled = false; });
+  });
+
+  // =============================================================
+  // Site passcode gate (independent of, and in addition to, Google sign-in)
+  // =============================================================
+  var GATE_STORAGE_KEY = 'learning-ledger-unlocked';
+
+  function showSiteGateIfNeeded() {
+    var gate = $('site-gate');
+    var stored = null;
+    try { stored = window.localStorage.getItem(GATE_STORAGE_KEY); } catch (e) {}
+    if (stored && stored === state.settings.passcode) {
+      gate.hidden = true;
+      enterApp();
+    } else {
+      gate.hidden = false;
+      $('gate-error').textContent = '';
+      $('gate-input').value = '';
+      setTimeout(function () { $('gate-input').focus(); }, 30);
+    }
+  }
+
+  function enterApp() {
+    $('app-root').hidden = false;
+    $('ask-claude-wrap').hidden = false;
+    renderAll();
+  }
+
+  function attemptGateUnlock() {
+    if ($('gate-input').value === state.settings.passcode) {
+      $('site-gate').hidden = true;
+      try { window.localStorage.setItem(GATE_STORAGE_KEY, state.settings.passcode); } catch (e) {}
+      enterApp();
+    } else {
+      $('gate-error').textContent = 'That passcode is incorrect.';
+    }
+  }
+  $('gate-submit').addEventListener('click', attemptGateUnlock);
+  $('gate-input').addEventListener('keydown', function (e) { if (e.key === 'Enter') attemptGateUnlock(); });
+
+  // ---------------- teacher-mode toggle (same passcode) ----------------
+  var modeBtn = $('mode-btn');
+  var pinPopover = $('pin-popover');
+  var pinInput = $('pin-input');
+  var pinError = $('pin-error');
+
+  modeBtn.addEventListener('click', function () {
+    if (isTeacherMode) { setTeacherMode(false); return; }
+    pinPopover.hidden = !pinPopover.hidden;
+    pinError.textContent = '';
+    pinInput.value = '';
+    if (!pinPopover.hidden) pinInput.focus();
+  });
+  $('pin-cancel').addEventListener('click', function () { pinPopover.hidden = true; });
+  $('pin-submit').addEventListener('click', submitPin);
+  pinInput.addEventListener('keydown', function (e) { if (e.key === 'Enter') submitPin(); });
+
+  function submitPin() {
+    if (pinInput.value === state.settings.passcode) {
+      pinPopover.hidden = true;
+      setTeacherMode(true);
+    } else {
+      pinError.textContent = 'Incorrect passcode.';
+    }
+  }
+
+  function setTeacherMode(on) {
+    isTeacherMode = on;
+    modeBtn.textContent = on ? 'Teacher mode (on)' : 'Student view';
+    modeBtn.classList.toggle('is-on', on);
+    $('teacher-panel').hidden = !on;
+    $('course-title').setAttribute('contenteditable', on ? 'true' : 'false');
+    $('course-sub').setAttribute('contenteditable', on ? 'true' : 'false');
+    $('qa-composer').style.display = on ? 'none' : 'flex';
+    forceEditIds = {};
+    editingIds = {};
+    renderAll();
+  }
+
+  // course title / subtitle editing (teacher only)
+  wirePlainTextEditable($('course-title'));
+  wirePlainTextEditable($('course-sub'));
+  function saveCourseHeader() {
+    var title = textOf($('course-title')) || defaultState().courseTitle;
+    var sub = textOf($('course-sub'));
+    if (title === state.courseTitle && sub === state.courseSub) return;
+    saveState(function (s) { s.courseTitle = title; s.courseSub = sub; return s; }).catch(function (err) {
+      if (!(err && err.code === 'auth_expired')) setSyncStatus(driveErrorMessage(err), true);
+    });
+  }
+  $('course-title').addEventListener('blur', saveCourseHeader);
+  $('course-sub').addEventListener('blur', saveCourseHeader);
+
+  // =============================================================
+  // General Q&A (not tied to an entry) — threaded, persisted in state.qaThreads
+  // =============================================================
+  $('qa-toggle').addEventListener('click', function () { $('qa-body').hidden = !$('qa-body').hidden; });
+
+  function qaMsgFromLabel(from) {
+    return from === 'teacher' ? (isTeacherMode ? 'You' : 'Teacher') : (isTeacherMode ? 'Her' : 'You');
+  }
+
+  function sendQaMessage(threadId, fromRole, text, statusEl, onDone) {
+    statusEl.hidden = false;
+    statusEl.className = 'save-status';
+    statusEl.textContent = 'Sending…';
+    saveState(function (s) {
+      if (!s.qaThreads[threadId]) s.qaThreads[threadId] = [];
+      s.qaThreads[threadId].push({ from: fromRole, text: text, at: new Date().toISOString() });
+      return s;
+    }).then(function () {
+      statusEl.hidden = true;
+      renderAll();
+      if (onDone) onDone(null);
+    }).catch(function (err) {
+      if (err && err.code === 'auth_expired') return;
+      statusEl.className = 'save-status is-error';
+      statusEl.textContent = "Couldn't send — your message is still here, try again.";
+      if (onDone) onDone(err);
+    });
+  }
+
+  $('qa-send-btn').addEventListener('click', function () {
+    var box = $('qa-composer-box');
+    var text = textOf(box);
+    if (!text) return;
+    var threadId = newId('t');
+    var role = isTeacherMode ? 'teacher' : 'student';
+    var btn = $('qa-send-btn');
+    btn.disabled = true;
+    sendQaMessage(threadId, role, text, $('qa-composer-status'), function (err) {
+      btn.disabled = false;
+      if (!err) box.textContent = '';
+    });
+  });
+  wirePlainTextEditable($('qa-composer-box'));
+
+  function renderQa() {
+    var qaList = $('qa-list');
+    var threadIds = Object.keys(state.qaThreads);
+    threadIds.sort(function (a, b) {
+      var aFirst = (state.qaThreads[a][0] && state.qaThreads[a][0].at) || '';
+      var bFirst = (state.qaThreads[b][0] && state.qaThreads[b][0].at) || '';
+      return bFirst.localeCompare(aFirst);
+    });
+
+    $('qa-empty').hidden = threadIds.length > 0;
+    var unanswered = 0;
+    qaList.innerHTML = '';
+
+    threadIds.forEach(function (threadId) {
+      var msgs = state.qaThreads[threadId];
+      if (!msgs || !msgs.length) return;
+      var lastFrom = msgs[msgs.length - 1].from;
+
+      var li = document.createElement('li');
+      li.className = 'qa-item';
+
+      var badge = document.createElement('span');
+      badge.className = 'qa-thread-badge';
+      if (lastFrom === 'teacher') {
+        badge.textContent = 'Answered';
+        badge.setAttribute('data-state', 'answered');
+      } else {
+        badge.textContent = isTeacherMode ? 'Awaiting your reply' : 'Awaiting reply';
+        badge.setAttribute('data-state', 'waiting');
+        unanswered++;
+      }
+      li.appendChild(badge);
+
+      var messagesEl = document.createElement('ol');
+      messagesEl.className = 'qa-messages';
+      msgs.forEach(function (m) {
+        var msgLi = document.createElement('li');
+        msgLi.className = 'qa-msg';
+        msgLi.setAttribute('data-from', m.from);
+        msgLi.innerHTML =
+          '<div class="qa-msg-head"><span class="qa-msg-from"></span><span class="qa-msg-date"></span></div>' +
+          '<div class="qa-msg-text"></div>';
+        msgLi.querySelector('.qa-msg-from').textContent = qaMsgFromLabel(m.from);
+        msgLi.querySelector('.qa-msg-date').textContent = fmtDate(m.at);
+        msgLi.querySelector('.qa-msg-text').textContent = m.text;
+        messagesEl.appendChild(msgLi);
+      });
+      li.appendChild(messagesEl);
+
+      var replyRow = document.createElement('div');
+      replyRow.className = 'qa-reply-row';
+      replyRow.innerHTML =
+        '<div class="qa-reply-box" contenteditable="true" data-placeholder="Write a reply..."></div>' +
+        '<button class="small-btn qa-reply-send-btn" type="button">Send</button>';
+      var replyBox = replyRow.querySelector('.qa-reply-box');
+      var replySendBtn = replyRow.querySelector('.qa-reply-send-btn');
+      wirePlainTextEditable(replyBox);
+      replyBox.textContent = qaDrafts[threadId] || '';
+      replyBox.addEventListener('input', function () { qaDrafts[threadId] = textOf(replyBox); });
+
+      var replyStatus = document.createElement('div');
+      replyStatus.className = 'save-status';
+      replyStatus.hidden = true;
+
+      replySendBtn.addEventListener('click', function () {
+        var replyText = textOf(replyBox);
+        if (!replyText) return;
+        var role = isTeacherMode ? 'teacher' : 'student';
+        replySendBtn.disabled = true;
+        sendQaMessage(threadId, role, replyText, replyStatus, function (err) {
+          if (err) { replySendBtn.disabled = false; }
+          else { delete qaDrafts[threadId]; }
+        });
+      });
+
+      replyRow.appendChild(replyStatus);
+      li.appendChild(replyRow);
+      qaList.appendChild(li);
+    });
+
+    var countEl = $('qa-toggle-count');
+    if (unanswered > 0) {
+      countEl.hidden = false;
+      countEl.textContent = unanswered + (isTeacherMode ? ' awaiting your reply' : ' awaiting reply');
+    } else {
+      countEl.hidden = true;
+    }
+  }
+
+  // =============================================================
+  // Ask Claude floating button
+  // =============================================================
+  $('ask-claude-btn').addEventListener('click', function () {
+    var pop = $('ask-claude-popover');
+    pop.hidden = !pop.hidden;
+    if (!pop.hidden) $('ask-claude-input').focus();
+  });
+  $('ask-claude-cancel').addEventListener('click', function () { $('ask-claude-popover').hidden = true; });
+  $('ask-claude-go').addEventListener('click', function () {
+    var box = $('ask-claude-input');
+    var question = textOf(box);
+    var url = question ? ('https://claude.ai/new?q=' + encodeURIComponent(question)) : 'https://claude.ai/new';
+    window.open(url, '_blank', 'noopener,noreferrer');
+    box.textContent = '';
+    $('ask-claude-popover').hidden = true;
+  });
+  wirePlainTextEditable($('ask-claude-input'));
+
+  // =============================================================
+  // Add entry (teacher)
+  // =============================================================
+  $('new-type-picker').addEventListener('click', function (e) {
+    var btn = e.target.closest('.type-btn');
+    if (!btn) return;
+    selectedType = btn.getAttribute('data-type');
+    Array.prototype.forEach.call(document.querySelectorAll('#new-type-picker .type-btn'), function (b) {
+      b.classList.toggle('is-selected', b === btn);
+    });
+  });
+
+  $('new-file').addEventListener('change', function (e) {
+    var file = e.target.files && e.target.files[0];
+    var errEl = $('new-error');
+    errEl.textContent = '';
+    pendingAttachment = null;
+    if (!file) return;
+    if (file.size > PDF_MAX_BYTES) {
+      errEl.textContent = 'That PDF is over 4 MB — please use a link instead.';
+      e.target.value = '';
+      return;
+    }
+    pendingAttachment = { file: file, name: file.name };
+  });
+
+  wirePlainTextEditable($('new-note'));
+
+  $('add-btn').addEventListener('click', function () {
+    var titleInput = $('new-title');
+    var urlInput = $('new-url');
+    var noteInput = $('new-note');
+    var deadlineInput = $('new-deadline');
+    var errEl = $('new-error');
+    var statusEl = $('new-status');
+    errEl.textContent = '';
+    statusEl.textContent = '';
+
+    var title = titleInput.value.trim();
+    var url = urlInput.value.trim();
+
+    if (!title) { errEl.textContent = 'Give this entry a title.'; titleInput.focus(); return; }
+    if (!url && !pendingAttachment) { errEl.textContent = 'Add a link or attach a PDF.'; urlInput.focus(); return; }
+
+    var addBtn = $('add-btn');
+    addBtn.disabled = true;
+
+    var uploadP = pendingAttachment
+      ? (statusEl.textContent = 'Uploading PDF…', uploadPdf(pendingAttachment.file))
+      : Promise.resolve(null);
+
+    uploadP.then(function (pdfFileId) {
+      statusEl.textContent = 'Saving…';
+      var entry = {
+        id: newId('e'),
+        title: title,
+        type: selectedType,
+        url: pdfFileId ? '' : url,
+        pdfFileId: pdfFileId || '',
+        pdfName: pdfFileId ? pendingAttachment.name : '',
+        deadline: deadlineInput.value || '',
+        note: textOf(noteInput),
+        reflection: '',
+        question: '',
+        completedAt: '',
+        completedBy: ''
+      };
+      return saveState(function (s) { s.entries.push(entry); return s; });
+    }).then(function () {
+      titleInput.value = '';
+      urlInput.value = '';
+      noteInput.textContent = '';
+      deadlineInput.value = '';
+      pendingAttachment = null;
+      $('new-file').value = '';
+      selectedType = 'video';
+      Array.prototype.forEach.call(document.querySelectorAll('#new-type-picker .type-btn'), function (b, i) {
+        b.classList.toggle('is-selected', i === 0);
+      });
+      statusEl.textContent = 'Entry added.';
+      setTimeout(function () { statusEl.textContent = ''; }, 3000);
+      renderAll();
+    }).catch(function (err) {
+      if (!(err && err.code === 'auth_expired')) {
+        statusEl.textContent = '';
+        errEl.textContent = "Couldn't save that entry — try again. (" + driveErrorMessage(err) + ')';
+      }
+    }).then(function () { addBtn.disabled = false; });
+  });
+
+  // =============================================================
+  // Portal settings — passcode only (no email/template fields)
+  // =============================================================
+  $('settings-toggle').addEventListener('click', function () {
+    var panel = $('settings-panel');
+    panel.hidden = !panel.hidden;
+  });
+
+  $('save-pin-btn').addEventListener('click', function () {
+    var val = $('new-pin').value.trim();
+    var msg = $('pin-saved-msg');
+    if (!val) return;
+    saveState(function (s) { s.settings.passcode = val; return s; }).then(function () {
+      $('new-pin').value = '';
+      msg.textContent = "Saved — she'll need the new passcode next time.";
+      setTimeout(function () { msg.textContent = ''; }, 3000);
+    }).catch(function (err) {
+      if (!(err && err.code === 'auth_expired')) msg.textContent = "Couldn't save — try again.";
+    });
+  });
+
+  // =============================================================
+  // Entries: render + lock sequencing + complete + edit + delete
+  // =============================================================
+
+  function computeLockInfo() {
+    var entries = state.entries;
+    var activeIndex = -1;
+    for (var j = 0; j < entries.length; j++) {
+      if (!entries[j].completedAt) { activeIndex = j; break; }
+    }
+    return { activeIndex: activeIndex };
+  }
+
+  function buildEntryLi(entry, idx, lockInfo) {
+    var isCompleted = !!entry.completedAt;
+    var isActive = !isCompleted && idx === lockInfo.activeIndex;
+    var isLocked = !isCompleted && !isActive;
+    var reached = isCompleted || isActive;
+    // isEditableNow reflects an ACTIVE edit session (the fields are actually
+    // showing as inputs right now), not mere permission -- permission alone
+    // (unreached => freely editable) must not force every unreached entry
+    // into edit mode on every render. An unreached entry starts read-only
+    // with a plain "Edit" button; clicking it sets editingIds[entry.id].
+    var canEdit = isTeacherMode && !reached && !!editingIds[entry.id];
+    var canEditReached = isTeacherMode && reached && !!forceEditIds[entry.id];
+
+    var li = document.createElement('li');
+    li.className = 'entry' + (isCompleted ? ' is-completed' : isActive ? ' is-active' : ' is-locked');
+    li.setAttribute('data-entry-id', entry.id);
+
+    // ---- top row ----
+    var top = document.createElement('div');
+    top.className = 'entry-top';
+    var tagClass = isCompleted ? 'completed' : isActive ? 'active' : 'locked';
+    var tagText = isCompleted ? 'Posted' : isActive ? 'Active' : 'Locked';
+    top.innerHTML =
+      '<span class="entry-index">№ ' + String(idx + 1).padStart(2, '0') + '</span>' +
+      '<span class="status-tag ' + tagClass + '">' + tagText + '</span>' +
+      '<span class="type-badge" data-cat="' + entry.type + '">' + typeIcon(entry.type) + ' ' + typeLabel(entry.type) + '</span>';
+    li.appendChild(top);
+
+    if (entry.deadline) {
+      var todayStr = new Date().toISOString().slice(0, 10);
+      var isOverdue = !isCompleted && entry.deadline < todayStr;
+      var pill = document.createElement('span');
+      pill.className = 'deadline-pill' + (isOverdue ? ' is-overdue' : '') + (isCompleted ? ' is-done' : '');
+      pill.textContent = (isCompleted ? 'Was due ' : isOverdue ? '⚠ Overdue — was due ' : '⏳ Due ') + fmtDate(entry.deadline);
+      top.appendChild(pill);
+    }
+
+    var isEditableNow = canEdit || canEditReached;
+
+    // ---- title ----
+    if (isEditableNow) {
+      var titleInput = document.createElement('input');
+      titleInput.type = 'text';
+      titleInput.className = 'entry-title-input';
+      titleInput.value = entry.title;
+      li.appendChild(titleInput);
+    } else {
+      var titleEl = document.createElement('h3');
+      titleEl.className = 'entry-title-display';
+      titleEl.textContent = entry.title;
+      li.appendChild(titleEl);
+    }
+
+    // ---- type picker (edit mode only) ----
+    var editTypeVal = entry.type;
+    if (isEditableNow) {
+      var typeRow = document.createElement('div');
+      typeRow.className = 'edit-field-row';
+      typeRow.innerHTML = '<label>Type</label>';
+      var picker = document.createElement('div');
+      picker.className = 'type-picker';
+      ['video', 'paper', 'article', 'other'].forEach(function (t) {
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'type-btn' + (t === entry.type ? ' is-selected' : '');
+        b.setAttribute('data-type', t);
+        b.textContent = typeIcon(t) + ' ' + typeLabel(t);
+        b.addEventListener('click', function () {
+          editTypeVal = t;
+          Array.prototype.forEach.call(picker.querySelectorAll('.type-btn'), function (bb) {
+            bb.classList.toggle('is-selected', bb === b);
+          });
+        });
+        picker.appendChild(b);
+      });
+      typeRow.appendChild(picker);
+      li.appendChild(typeRow);
+    }
+
+    // ---- link / attachment ----
+    var linkRow = document.createElement('div');
+    linkRow.className = 'entry-link-row';
+    var urlEditInput = null;
+    var previewFrame = null;
+
+    if (isLocked) {
+      // link/attachment hidden while locked
+    } else if (isEditableNow) {
+      urlEditInput = document.createElement('input');
+      urlEditInput.type = 'url';
+      urlEditInput.className = 'entry-title-input';
+      urlEditInput.style.fontFamily = '"IBM Plex Mono", monospace';
+      urlEditInput.style.fontSize = '13px';
+      urlEditInput.style.fontWeight = '400';
+      urlEditInput.placeholder = 'https://... (leave blank if this entry has a PDF attachment)';
+      urlEditInput.value = entry.url || '';
+      li.appendChild(urlEditInput);
+      if (entry.pdfFileId) {
+        var attachSpan = document.createElement('span');
+        attachSpan.className = 'attach-name';
+        attachSpan.textContent = '📎 ' + (entry.pdfName || 'attached PDF') + ' (replacing the link above won\'t remove this attachment; leave the link blank to keep using the PDF)';
+        linkRow.appendChild(attachSpan);
+        li.appendChild(linkRow);
+      }
+    } else if (entry.pdfFileId) {
+      var attachSpan2 = document.createElement('span');
+      attachSpan2.className = 'attach-name';
+      attachSpan2.textContent = '📎 ' + (entry.pdfName || 'attached file');
+      linkRow.appendChild(attachSpan2);
+
+      var viewBtn = document.createElement('button');
+      viewBtn.type = 'button';
+      viewBtn.className = 'open-link preview-btn';
+      viewBtn.textContent = 'View PDF ↓';
+      linkRow.appendChild(viewBtn);
+
+      previewFrame = document.createElement('iframe');
+      previewFrame.className = 'pdf-preview';
+      previewFrame.hidden = true;
+      previewFrame.title = entry.pdfName || 'Attached PDF';
+
+      viewBtn.addEventListener('click', function () {
+        if (previewFrame.hidden) {
+          viewBtn.disabled = true;
+          viewBtn.textContent = 'Loading…';
+          fetchPdfObjectUrl(entry.pdfFileId).then(function (objUrl) {
+            previewFrame.src = objUrl;
+            previewFrame.hidden = false;
+            viewBtn.textContent = 'Hide PDF ↑';
+            viewBtn.disabled = false;
+          }).catch(function (err) {
+            viewBtn.disabled = false;
+            viewBtn.textContent = 'View PDF ↓';
+            if (!(err && err.code === 'auth_expired')) alert("Couldn't load the PDF: " + driveErrorMessage(err));
+          });
+        } else {
+          previewFrame.hidden = true;
+          viewBtn.textContent = 'View PDF ↓';
+        }
+      });
+
+      li.appendChild(linkRow);
+      li.appendChild(previewFrame);
+    } else if (entry.url) {
+      var linkText = document.createElement('span');
+      linkText.className = 'entry-link-text';
+      linkText.textContent = entry.url;
+      linkRow.appendChild(linkText);
+
+      var openLink = document.createElement('a');
+      openLink.className = 'open-link';
+      openLink.target = '_blank';
+      openLink.rel = 'noopener noreferrer';
+      openLink.textContent = 'Open →';
+      openLink.href = entry.url;
+      linkRow.appendChild(openLink);
+      li.appendChild(linkRow);
+    }
+
+    // ---- teacher note ----
+    var noteEditBox = null;
+    if (isEditableNow) {
+      noteEditBox = document.createElement('div');
+      noteEditBox.className = 'teacher-note-input';
+      noteEditBox.contentEditable = 'true';
+      noteEditBox.setAttribute('data-placeholder', 'Anything she should know before starting this one...');
+      noteEditBox.textContent = entry.note || '';
+      wirePlainTextEditable(noteEditBox);
+      li.appendChild(noteEditBox);
+    } else if (!isLocked && entry.note) {
+      var noteEl = document.createElement('div');
+      noteEl.className = 'teacher-note';
+      noteEl.textContent = entry.note;
+      li.appendChild(noteEl);
+    }
+
+    // ---- locked message ----
+    if (isLocked) {
+      var lockedMsg = document.createElement('div');
+      lockedMsg.className = 'locked-msg';
+      lockedMsg.innerHTML = '🔒 <span>Locked — finish the entry above to unlock this one.</span>';
+      li.appendChild(lockedMsg);
+    }
+
+    // ---- reflection / completion ----
+    if (!isLocked) {
+      var reflectBlock = document.createElement('div');
+      reflectBlock.className = 'reflect-block';
+
+      if (isCompleted) {
+        reflectBlock.innerHTML =
+          '<label>What did you learn?</label>' +
+          '<div class="reflect-box" contenteditable="false"></div>' +
+          '<label>Questions or things to follow up on</label>' +
+          '<div class="question-box" contenteditable="false"></div>' +
+          '<div class="posted-badge">✓ Posted on ' + fmtDate(entry.completedAt) + '</div>';
+        reflectBlock.querySelector('.reflect-box').textContent = entry.reflection || '(nothing written)';
+        reflectBlock.querySelector('.question-box').textContent = entry.question || '(none)';
+      } else {
+        reflectBlock.innerHTML =
+          '<label>What did you learn?</label>' +
+          '<div class="reflect-box" contenteditable="true" data-placeholder="Write what you learned from this one — required to post."></div>' +
+          '<label>Questions or things to follow up on (optional)</label>' +
+          '<div class="question-box" contenteditable="true" data-placeholder="Anything you want to ask, or come back to..."></div>' +
+          '<div class="entry-actions">' +
+            '<button class="complete-btn" type="button" disabled>✓ Mark as complete</button>' +
+            '<span class="complete-hint">Write what you learned first</span>' +
+          '</div>' +
+          '<div class="save-status" hidden></div>';
+
+        var reflectBox = reflectBlock.querySelector('.reflect-box');
+        var questionBox = reflectBlock.querySelector('.question-box');
+        var completeBtn = reflectBlock.querySelector('.complete-btn');
+        var completeHint = reflectBlock.querySelector('.complete-hint');
+        var saveStatus = reflectBlock.querySelector('.save-status');
+        wirePlainTextEditable(reflectBox);
+        wirePlainTextEditable(questionBox);
+
+        function refreshCompleteBtn() {
+          var has = textOf(reflectBox).length > 0;
+          completeBtn.disabled = !has;
+          completeHint.style.display = has ? 'none' : '';
+        }
+        reflectBox.addEventListener('input', refreshCompleteBtn);
+        refreshCompleteBtn();
+
+        completeBtn.addEventListener('click', function () {
+          if (textOf(reflectBox).length === 0) return;
+          var reflectionText = textOf(reflectBox);
+          var questionText = textOf(questionBox);
+          var role = isTeacherMode ? 'teacher' : 'student';
+
+          completeBtn.disabled = true;
+          saveStatus.hidden = false;
+          saveStatus.className = 'save-status';
+          saveStatus.textContent = 'Saving…';
+
+          saveState(function (s) {
+            var e = s.entries.find(function (x) { return x.id === entry.id; });
+            if (e) {
+              e.reflection = reflectionText;
+              e.question = questionText;
+              e.completedAt = new Date().toISOString();
+              e.completedBy = role;
+            }
+            return s;
+          }).then(function () {
+            saveStatus.hidden = true;
+            renderAll();
+          }).catch(function (err) {
+            if (err && err.code === 'auth_expired') return;
+            completeBtn.disabled = false;
+            saveStatus.className = 'save-status is-error';
+            saveStatus.textContent = "Couldn't save — your answer is still here, try again.";
+          });
+        });
+      }
+      li.appendChild(reflectBlock);
+    }
+
+    // ---- teacher controls: edit / delete ----
+    if (isTeacherMode) {
+      var teacherControls = document.createElement('div');
+      teacherControls.className = 'entry-teacher-controls';
+
+      if (reached && !forceEditIds[entry.id]) {
+        var warn = document.createElement('div');
+        warn.className = 'reached-warning';
+        warn.innerHTML = '⚠️ This entry has already been reached — editing may confuse your student.';
+        teacherControls.appendChild(warn);
+
+        var editAnywayBtn = document.createElement('button');
+        editAnywayBtn.type = 'button';
+        editAnywayBtn.className = 'small-btn warn';
+        editAnywayBtn.textContent = 'Edit anyway';
+        editAnywayBtn.addEventListener('click', function () {
+          forceEditIds[entry.id] = true;
+          renderAll();
+        });
+        teacherControls.appendChild(editAnywayBtn);
+      } else if (isEditableNow) {
+        if (reached) {
+          var warn2 = document.createElement('div');
+          warn2.className = 'reached-warning';
+          warn2.innerHTML = '⚠️ Editing an entry your student has already reached — she may see the change mid-course.';
+          teacherControls.appendChild(warn2);
+        }
+
+        var saveBtn = document.createElement('button');
+        saveBtn.type = 'button';
+        saveBtn.className = 'small-btn primary';
+        saveBtn.textContent = 'Save changes';
+        teacherControls.appendChild(saveBtn);
+
+        var cancelBtn = document.createElement('button');
+        cancelBtn.type = 'button';
+        cancelBtn.className = 'small-btn';
+        cancelBtn.textContent = reached ? 'Done editing' : 'Cancel';
+        cancelBtn.addEventListener('click', function () {
+          delete forceEditIds[entry.id];
+          delete editingIds[entry.id];
+          renderAll();
+        });
+        teacherControls.appendChild(cancelBtn);
+
+        var deleteBtn0 = document.createElement('button');
+        deleteBtn0.type = 'button';
+        deleteBtn0.className = 'small-btn danger';
+        deleteBtn0.textContent = 'Delete';
+        deleteBtn0.addEventListener('click', function () {
+          showConfirm('Delete "' + (entry.title || 'this entry') + '"? This cannot be undone.', function () {
+            var pdfToDelete = entry.pdfFileId;
+            saveState(function (s) {
+              s.entries = s.entries.filter(function (x) { return x.id !== entry.id; });
+              return s;
+            }).then(function () {
+              if (pdfToDelete) deleteDriveFileBestEffort(pdfToDelete);
+              delete forceEditIds[entry.id];
+              delete editingIds[entry.id];
+              renderAll();
+            }).catch(function (err) {
+              if (!(err && err.code === 'auth_expired')) alert("Couldn't delete — try again. (" + driveErrorMessage(err) + ')');
+            });
+          });
+        });
+        teacherControls.appendChild(deleteBtn0);
+
+        var statusSpan = document.createElement('span');
+        statusSpan.className = 'save-status';
+        teacherControls.appendChild(statusSpan);
+
+        saveBtn.addEventListener('click', function () {
+          saveBtn.disabled = true;
+          statusSpan.textContent = 'Saving…';
+          statusSpan.className = 'save-status';
+          var newTitle = (titleInput.value || '').trim();
+          if (!newTitle) {
+            statusSpan.className = 'save-status is-error';
+            statusSpan.textContent = 'Title cannot be empty.';
+            saveBtn.disabled = false;
+            return;
+          }
+          var newUrl = urlEditInput ? urlEditInput.value.trim() : entry.url;
+          var newNote = noteEditBox ? textOf(noteEditBox) : entry.note;
+          saveState(function (s) {
+            var e = s.entries.find(function (x) { return x.id === entry.id; });
+            if (e) {
+              e.title = newTitle;
+              e.type = editTypeVal;
+              e.url = newUrl;
+              e.note = newNote;
+            }
+            return s;
+          }).then(function () {
+            delete forceEditIds[entry.id];
+            delete editingIds[entry.id];
+            renderAll();
+          }).catch(function (err) {
+            saveBtn.disabled = false;
+            if (!(err && err.code === 'auth_expired')) {
+              statusSpan.className = 'save-status is-error';
+              statusSpan.textContent = "Couldn't save — try again.";
+            }
+          });
+        });
+      } else {
+        // unreached, not yet in edit mode: plain Edit + Delete
+        var editBtn = document.createElement('button');
+        editBtn.type = 'button';
+        editBtn.className = 'small-btn';
+        editBtn.textContent = 'Edit';
+        editBtn.addEventListener('click', function () {
+          editingIds[entry.id] = true;
+          renderAll();
+        });
+        teacherControls.appendChild(editBtn);
+
+        var deleteBtn = document.createElement('button');
+        deleteBtn.type = 'button';
+        deleteBtn.className = 'small-btn danger';
+        deleteBtn.textContent = 'Delete';
+        deleteBtn.addEventListener('click', function () {
+          showConfirm('Delete "' + (entry.title || 'this entry') + '"? This cannot be undone.', function () {
+            var pdfToDelete = entry.pdfFileId;
+            saveState(function (s) {
+              s.entries = s.entries.filter(function (x) { return x.id !== entry.id; });
+              return s;
+            }).then(function () {
+              if (pdfToDelete) deleteDriveFileBestEffort(pdfToDelete);
+              renderAll();
+            }).catch(function (err) {
+              if (!(err && err.code === 'auth_expired')) alert("Couldn't delete — try again. (" + driveErrorMessage(err) + ')');
+            });
+          });
+        });
+        teacherControls.appendChild(deleteBtn);
+      }
+
+      li.appendChild(teacherControls);
+    }
+
+    return li;
+  }
+
+  function renderEntries() {
+    var ledgerEl = $('ledger');
+    var emptyState = $('empty-state');
+    var entries = state.entries;
+    var lockInfo = computeLockInfo();
+
+    ledgerEl.innerHTML = '';
+    emptyState.hidden = entries.length > 0;
+
+    entries.forEach(function (entry, idx) {
+      ledgerEl.appendChild(buildEntryLi(entry, idx, lockInfo));
+    });
+
+    var posted = entries.filter(function (e) { return !!e.completedAt; }).length;
+    $('posted-count').textContent = String(posted);
+    $('total-count').textContent = String(entries.length);
+    $('progress-fill').style.width = entries.length ? Math.round((posted / entries.length) * 100) + '%' : '0%';
+
+    var activeLabel = $('active-label');
+    if (entries.length === 0) activeLabel.textContent = 'No entries yet';
+    else if (lockInfo.activeIndex === -1) activeLabel.textContent = 'All entries posted 🎉';
+    else activeLabel.textContent = 'Up next: entry № ' + String(lockInfo.activeIndex + 1).padStart(2, '0');
+  }
+
+  function renderHeader() {
+    var titleEl = $('course-title');
+    var subEl = $('course-sub');
+    if (document.activeElement !== titleEl) titleEl.textContent = state.courseTitle;
+    if (document.activeElement !== subEl) subEl.textContent = state.courseSub;
+  }
+
+  function renderAll() {
+    renderHeader();
+    renderEntries();
+    renderQa();
+  }
+
+})();
+</script>
+</body>
+</html>
